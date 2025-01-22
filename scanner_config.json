@@ -1,0 +1,8 @@
+{
+    "paths": {
+        "game": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Arma 3",
+        "mods": "D:\\pca\\pcanext",
+        "missions": "D:\\pca\\pca_missions",
+        "cache": "cache"
+    }
+}

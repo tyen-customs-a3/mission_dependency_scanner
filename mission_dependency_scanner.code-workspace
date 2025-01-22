@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../asset_scanner"
+		},
+		{
+			"path": "../ini_class_parser"
+		},
+		{
+			"path": "../mission_scanner"
+		}
+	],
+	"settings": {}
+}

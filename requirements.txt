@@ -1,0 +1,5 @@
+pytest>=6.2.2
+rich>=13.0.0
+-e ../asset_scanner
+-e ../ini_class_parser
+-e ../mission_scanner
