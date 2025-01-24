@@ -244,32 +244,42 @@ def scan_task(task: ScanTask, game_path: Path, cache_dir: Path,
     progress.console.print(f"[blue]Processing {len(task.mods)} mods and {len(mission_results)} missions")
     logger.debug(f"Task settings - skip_assets: {task.skip_assets}")
 
-    # Initialize mod-specific asset API if needed
-    mod_api = None
-    if not task.skip_assets:
-        mod_cache = cache_dir / "mod_assets" / task.name
-        mod_cache.mkdir(parents=True, exist_ok=True)
-        mod_api = AssetAPI(mod_cache)
-
-        # Copy base assets to mod API
-        asset_count = mod_api.merge_assets(base_api)
-        progress.console.print(f"[blue]Merged {asset_count} base assets")
-
-    # Status tracking
+    # Initialize phases tracking
     phases = 1 if task.skip_assets else 2
     status_task = progress.add_task(f"[bold blue]{task.name} Status", total=phases)
 
-    # Scan mod folders if not skipping assets
+    # Initialize a fresh mod-specific asset API for this task
+    mod_cache = cache_dir / "mod_assets" / task.name
+    mod_cache.mkdir(parents=True, exist_ok=True)
+    mod_api = AssetAPI(mod_cache)
+    
     if not task.skip_assets:
+        # Only merge base assets if we're not skipping asset scanning
+        asset_count = mod_api.merge_assets(base_api)
+        progress.console.print(f"[blue]Merged {asset_count} base assets")
+
+        # Scan mod folders for this specific task only
         progress.update(status_task, description="[bold blue]Phase 1: Mod Asset Scanning")
         mod_task = progress.add_task("[cyan]Scanning mod assets...", total=len(task.mods))
         for mod_path in task.mods:
+            if not mod_path.exists():
+                progress.console.print(f"[yellow]Warning: Mod path not found: {mod_path}")
+                progress.advance(mod_task)
+                continue
+                
             progress.update(mod_task, description=f"[cyan]Scanning mod: {mod_path.name}")
-            mod_api.add_folder(mod_path.name.strip('@'), mod_path)
-            mod_api.scan_all_folders()
+            try:
+                mod_api.add_folder(mod_path.name.strip('@'), mod_path)
+                mod_api.scan_all_folders()
+            except Exception as e:
+                progress.console.print(f"[red]Error scanning mod {mod_path}: {e}")
             progress.advance(mod_task)
         progress.update(status_task, advance=1)
 
+    # Create a fresh class API for this task's configuration
+    progress.update(status_task, description="[bold blue]Phase 2: Class Processing")
+    class_api = ClassHierarchyAPI(task.class_config)
+    
     # Process class definitions
     progress.update(status_task, description="[bold blue]Phase 2: Class Processing")
     class_api = ClassHierarchyAPI(task.class_config)
@@ -289,18 +299,15 @@ def scan_task(task: ScanTask, game_path: Path, cache_dir: Path,
     progress.update(class_task, completed=True)
     progress.update(status_task, advance=1)
 
-    # Validate missions
+    # Validate missions using only this task's mod_api and classes
     all_results = []
     total_missing = 0
     mission_validate_task = progress.add_task("[cyan]Validating missions...", total=len(mission_results))
     
     for mission_path, scan_result in mission_results.items():
         progress.update(mission_validate_task, description=f"[cyan]Validating: {mission_path.name}")
-        if task.skip_assets:
-            # Create empty API if skipping assets
-            result = validate_mission(scan_result, AssetAPI(cache_dir), classes)
-        else:
-            result = validate_mission(scan_result, mod_api, classes)
+        # Always pass the task-specific mod_api (empty if skip_assets is True)
+        result = validate_mission(scan_result, mod_api, classes)
         all_results.append((mission_path.name, result))
         
         # Log validation results
