@@ -5,36 +5,11 @@
 		},
 		{
 			"path": "../temp_reports"
-		},
-		{
-			"path": "../../../pca"
 		}
 	],
 	"settings": {
 		"python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
-		"python.analysis.extraPaths": [
-			"../asset_scanner/src",
-			"../ini_class_parser/src",
-			"../mission_scanner/src"
-		],
 		"python.analysis.indexing": true,
-		"python.analysis.packageIndexDepths": [
-			{
-				"name": "asset_scanner",
-				"depth": 2
-			},
-			{
-				"name": "ini_class_parser",
-				"depth": 2
-			},
-			{
-				"name": "mission_scanner",
-				"depth": 2
-			}
-		],
-		"python.testing.pytestEnabled": true,
-		"python.testing.unittestEnabled": false,
-		"python.testing.nosetestsEnabled": false,
 		"python.envFile": "${workspaceFolder}/.env"
 	}
 }
