@@ -67,11 +67,7 @@ def format_mission_results(mission_name: str, results: ValidationResult, format_
             lines.append(f"  - {class_name}")
     else:
         lines.append("No missing classes")
-    
-    lines.append(f"\nStatistics:")
-    lines.append(f"  Valid Classes: {len(results.valid_classes)}")
-    lines.append(f"  Missing Classes: {len(results.missing_classes)}")
-    
+
     return "\n".join(lines)
 
 def write_overall_report(report_dir: Path, all_results: List[Tuple[str, ValidationResult]], 
