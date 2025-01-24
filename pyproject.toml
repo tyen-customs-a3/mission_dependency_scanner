@@ -1,15 +1,28 @@
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "mission_dependency_scanner"
+version = "0.1.0.dev0"
 description = "A tool for scanning Arma 3 mission dependencies"
 requires-python = ">=3.8"
-dynamic = ["version", "dependencies"]
+dependencies = [
+    "pytest>=6.2.2",
+    "rich>=13.0.0",
+    "asset_scanner @ file:../asset_scanner",
+    "ini_class_parser @ file:../ini_class_parser",
+    "mission_scanner @ file:../mission_scanner"
+]
 
-[tool.setuptools.dynamic]
-dependencies = {file = "requirements.txt"}
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.2.2",
+    "pytest-cov",
+    "setuptools>=45",
+    "wheel",
+    "setuptools_scm>=6.2"
+]
 
 [project.scripts]
 mission-scanner = "mission_dependency_scanner.cli:main"
@@ -20,7 +33,6 @@ package-dir = {"" = "src"}
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q --cov=src"
-testpaths = ["tests"]
 pythonpath = ["src"]
 
 [tool.coverage.run]
@@ -31,7 +43,7 @@ branch = true
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
-    "if __name__ == .__main__.:"
+    "if __name__ == .__main__.:" 
 ]
 
 [tool.setuptools_scm]

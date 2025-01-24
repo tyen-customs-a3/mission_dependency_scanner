@@ -28,7 +28,6 @@ ENV/
 
 # IDE
 .idea/
-.vscode/
 
 # Testing
 .pytest_cache/

@@ -1,5 +1,7 @@
-pytest>=6.2.2
-rich>=13.0.0
--e ../asset_scanner
--e ../ini_class_parser
--e ../mission_scanner
+# requirements.txt
+
+colorama==0.4.6
+iniconfig==2.0.0
+packaging==24.2
+pluggy==1.5.0
+pytest==8.3.4
