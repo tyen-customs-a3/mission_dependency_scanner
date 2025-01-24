@@ -15,6 +15,10 @@ A tool for validating Arma 3 mission dependencies against multiple modsets with 
 ## Requirements
 - Python 3.8+
 - Mikero's Tools (specifically ExtractPbo.exe in PATH)
+- Required modules (must be in parent directory):
+  - asset_scanner
+  - ini_class_parser
+  - mission_scanner
 
 ## Configuration
 
