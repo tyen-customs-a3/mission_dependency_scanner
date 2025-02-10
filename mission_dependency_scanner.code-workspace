@@ -2,11 +2,21 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../mission_scanner"
+		},
+		{
+			"path": "../asset_scanner"
+		},
+		{
+			"path": "../class_scanner"
 		}
 	],
 	"settings": {
 		"python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
 		"python.analysis.indexing": true,
-		"python.envFile": "${workspaceFolder}/.env"
+		"python.envFile": "${workspaceFolder}/.env",
+		"hide-files.files": []
 	}
 }

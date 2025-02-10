@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import NamedTuple, Set, Dict
+from typing import NamedTuple, Set, Dict, Any
 
 # Define categories/properties to ignore during validation
 IGNORED_CATEGORIES = {
@@ -36,13 +36,6 @@ class PropertyInfo(NamedTuple):
     type: str  # The property type (e.g., 'traits', 'magazines', etc.)
     value: str
 
-class ValidationResult(NamedTuple):
-    """Results of mission validation."""
-    valid_assets: Set[str]
-    valid_classes: Set[str]
-    missing_assets: Set[str]
-    missing_classes: Set[str]
-
 @dataclass
 class ScanTask:
     """Configuration for a specific scanning task"""
@@ -62,7 +55,7 @@ class MissionClass:
         return name in self.properties
     
     def get_property(self, name: str) -> list[str]:
-        """Get values for a property."""
+        """Get values for a property.""" 
         return self.properties.get(name, [])
 
 @dataclass
@@ -73,10 +66,22 @@ class PropertyValidationResult:
     missing_values: Set[str]
     ignored_values: Set[str]
 
-class ValidationResult(NamedTuple):
-    """Results of mission validation."""
+@dataclass
+class ScanResult:
+    """Mission scan results."""
+    valid_assets: Set[str] = field(default_factory=set)
+    valid_classes: Set[str] = field(default_factory=set)
+    missing_assets: Set[str] = field(default_factory=set)
+    missing_classes: Set[str] = field(default_factory=set)
+    equipment: Set[str] = field(default_factory=set)
+    property_results: Dict[str, Any] = field(default_factory=dict)
+    class_details: Dict[str, Any] = field(default_factory=dict)  # Add this line
+
+@dataclass
+class ValidationResult:
+    """Mission validation results."""
     valid_assets: Set[str]
     valid_classes: Set[str]
     missing_assets: Set[str]
     missing_classes: Set[str]
-    property_results: Dict[str, PropertyValidationResult]  # Property type -> validation results
+    property_results: Dict[str, Any]

@@ -44,4 +44,6 @@ logs/
 .DS_Store
 Thumbs.db
 config_analysis.txt
-.mypy_cache/
+/.mypy_cache/
+/.cache/
+/reports/

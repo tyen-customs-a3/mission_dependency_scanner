@@ -5,13 +5,29 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Scanner",
+            "name": "Scan Fast",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/scan.py",
+            "program": "${workspaceFolder}/src/dependency_scanner/scan.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": ["--config", "config.json"],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DEBUG": "1"
+            },
+            "stopOnEntry": false,
+            "showReturnValue": true,
+            "redirectOutput": true
+        },
+        {
+            "name": "Scan Full",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/dependency_scanner/scan.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": ["--config", "config_full.json"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}",
                 "DEBUG": "1"

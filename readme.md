@@ -17,7 +17,7 @@ A tool for validating Arma 3 mission dependencies against multiple modsets with 
 - Mikero's Tools (specifically ExtractPbo.exe in PATH)
 - Required modules (must be in parent directory):
   - [asset_scanner](https://github.com/tyen-customs-a3/asset_scanner)
-  - [ini_class_parser](https://github.com/tyen-customs-a3/ini_class_parser)
+  - [class_parser](https://github.com/tyen-customs-a3/class_scanner)
   - [mission_scanner](https://github.com/tyen-customs-a3/mission_scanner)
 
 ## Configuration

@@ -2,26 +2,14 @@
     "paths": {
         "game": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Arma 3",
         "cache": ".cache",
-        "missions": [
-            "D:\\pca\\pca_missions"
-        ]
+        "reports": "reports",
+        "missions": ["D:\\pca\\pca_missions_quick"]
     },
     "tasks": [
         {
-            "name": "pca",
-            "mods": [
-                "D:/pca/pca"
-            ],
-            "class_config": "D:/pca/ConfigExtract_pca.ini",
-            "skip_assets": true
-        },
-        {
-            "name": "pcanext",
-            "mods": [
-                "D:/pca/pcanext"
-            ],
-            "class_config": "D:/pca/ConfigExtract_pcanext.ini",
-            "skip_assets": true
+            "name": "pca_quick",
+            "mods": ["c:\\pca_quick"],
+            "skip_assets": false
         }
     ]
 }

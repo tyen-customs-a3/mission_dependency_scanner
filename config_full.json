@@ -1,0 +1,21 @@
+{
+    "paths": {
+        "game": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Arma 3",
+        "cache": ".cache",
+        "missions": [
+            "D:\\pca\\pca_missions"
+        ]
+    },
+    "tasks": [
+        {
+            "name": "pca",
+            "mods": [ "C:/pca" ],
+            "skip_assets": true
+        },
+        {
+            "name": "pcanext",
+            "mods": [ "C:/pcanext" ],
+            "skip_assets": true
+        }
+    ]
+}
