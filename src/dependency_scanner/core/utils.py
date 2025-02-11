@@ -3,7 +3,7 @@ from pathlib import Path
 import subprocess
 import os
 
-def setup_logging(debug: bool = False):
+def setup_logging(debug: bool = False) -> logging.Logger:
     """Configure logging for the application."""
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(

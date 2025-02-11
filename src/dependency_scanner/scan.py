@@ -2,12 +2,18 @@
 import sys
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Sequence, cast, Dict
 import argparse
 
-from dependency_scanner.core.config import load_config, parse_args
-from dependency_scanner.core.scanner import DependencyScanner
+from asset_scanner import ScanResult
+
+from dependency_scanner.core.config import load_config
 from dependency_scanner.core.types import ScanTask
+from dependency_scanner.core.utils.cache import is_cache_valid
+from dependency_scanner.core.scanning.content_scanner import ContentScanResult, ContentScanner
+from dependency_scanner.core.validation.task_validator import TaskValidator
+from dependency_scanner.core.reporting.report_writer import ReportWriter
+from dependency_scanner.core.scanning.mission_scanner import MissionScanningService
 
 logger = logging.getLogger(__name__)
 
@@ -26,80 +32,129 @@ def parse_args() -> argparse.Namespace:
 class Scanner:
     """High-level scanner interface."""
     
-    def __init__(self, cache_dir: Path, max_workers: int):
+    def __init__(self, cache_dir: Path, game_path: Path, max_workers: int):
         self.cache_dir = cache_dir
-        self.scanner = DependencyScanner(max_workers)
-        self.scanner.initialize_apis(cache_dir)
-    
-    def __enter__(self):
+        self.game_path = game_path
+        self.max_workers = max_workers
+        
+        # Initialize components
+        self.mission_scanner = MissionScanningService(max_workers)
+        self.content_scanner = ContentScanner(cache_dir, max_workers)
+        self.task_validator = TaskValidator(max_workers, cache_dir / "reports")
+        
+    def __enter__(self) -> 'Scanner':
+        """Context manager entry."""
         return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.scanner.close()
-    
-    def execute_scan(self, tasks: List[ScanTask], game_path: Path, missions: List[Path], format_type: str = "text") -> List[Optional[Path]]:
+        
+    def __exit__(self, exc_type: Optional[type], 
+                 exc_val: Optional[Exception], 
+                 exc_tb: Optional[type]) -> None:
+        """Context manager exit with cleanup."""
+        # Clean up resources
+        if hasattr(self, 'content_scanner'):
+            self.content_scanner.close()
+        if hasattr(self, 'mission_scanner'):
+            self.mission_scanner.close()
+            
+    def execute_scan(self, tasks: List[ScanTask], missions: List[Path], format_type: str = "text") -> bool:
         """Execute complete scan process."""
         try:
-            # Initialize scanner
-            if not game_path.exists():
-                raise ValueError(f"Game path does not exist: {game_path}")
+            # Scan missions
+            mission_results = self.mission_scanner.scan_missions(missions)
+            if not mission_results:
+                raise RuntimeError("Mission scan failed")
+
+            # Scan game content
+            game_task = ScanTask(
+                name="base_game",
+                mods=[self.game_path]
+            )
+            game_content = self.content_scanner.scan_content(game_task)
+            if not game_content:
+                raise RuntimeError("Game content scan failed")
             
-            # 1. Scan base game content
-            logger.info("Starting base game content scan...")
-            self.scanner.scan_base_content(game_path)
-            
-            # 2. Scan all missions
-            logger.info("Starting mission scan...")
-            self.scanner.scan_missions(missions)
-            
-            # 3. Process each task
-            reports = []
+            # Process each task
+            success = True
             for task in tasks:
-                logger.info(f"Processing task: {task.name}")
-                try:
-                    report = self.scanner.execute_task(task, format_type)
-                    reports.append(report)
-                except Exception as e:
-                    logger.error(f"Task failed: {task.name} - {e}")
-                    reports.append(None)
+                success &= self._process_single_task(
+                    task, 
+                    mission_results, 
+                    game_content, 
+                    format_type
+                )
             
-            return reports
+            return success
             
         except Exception as e:
-            logger.error(f"Scan failed: {e}", exc_info=True)
-            return []
+            logger.error(f"Scan failed: {e}")
+            return False
+
+    def _process_single_task(self, 
+                           task: ScanTask,
+                           mission_results: Dict[Path, ScanResult],
+                           game_content: ContentScanResult,
+                           format_type: str) -> bool:
+        """Process a single task completely."""
+        try:
+            logger.info(f"Processing task: {task.name}")
+            
+            # Scan task content
+            task_content = self.content_scanner.scan_content(task)
+            if not task_content:
+                logger.error(f"Failed to scan task: {task.name}")
+                return False
+            
+            # Validate task and generate report
+            validation_result = self.task_validator.validate_task(
+                task.name,
+                mission_results,
+                game_content,
+                task_content,
+                format_type
+            )
+            
+            if not validation_result:
+                logger.error(f"Failed to validate task: {task.name}")
+                return False
+                
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to process task {task.name}: {e}")
+            return False
 
 def main() -> int:
     """Main entry point."""
     args = parse_args()
+    
+    log_file = Path("dependency_scanner.log")
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
     )
+    
+    logger.info("Starting dependency scanner")
+    logger.info(f"Log file: {log_file.absolute()}")
     
     try:
         paths, tasks, missions = load_config(args.config, args)
-        game_path = paths.get("game")
-        if not game_path:
-            logger.error("Game path not specified")
-            return 1
-
-        if not missions or not tasks:
-            logger.error("No missions or tasks specified")
+        game_path = Path(paths.get("game", "")).resolve()
+        if not game_path or not missions or not tasks:
+            logger.error("Missing required paths")
             return 1
 
         cache_dir = Path(args.cache or paths.get("cache", ".cache")).resolve()
         cache_dir.mkdir(parents=True, exist_ok=True)
         
-        try:
-            with Scanner(cache_dir, args.workers) as scanner:
-                reports = scanner.execute_scan(tasks, game_path, missions, args.format)
-                return 0 if all(reports) else 1
-        except Exception as e:
-            logger.error(f"Unexpected error: {e}", exc_info=True)
-            return 1
-        
-    except Exception as e: 
+        with Scanner(cache_dir, game_path, args.workers) as scanner:
+            success = scanner.execute_scan(tasks, missions, args.format)
+            return 0 if success else 1
+            
+    except Exception as e:
         logger.error(f"Unexpected error: {e}", exc_info=True)
         return 1
 

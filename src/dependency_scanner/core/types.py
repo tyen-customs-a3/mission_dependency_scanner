@@ -41,8 +41,6 @@ class ScanTask:
     """Configuration for a specific scanning task"""
     name: str
     mods: list[Path]
-    class_config: Path
-    skip_assets: bool = False
 
 @dataclass
 class MissionClass:
@@ -75,7 +73,15 @@ class ScanResult:
     missing_classes: Set[str] = field(default_factory=set)
     equipment: Set[str] = field(default_factory=set)
     property_results: Dict[str, Any] = field(default_factory=dict)
-    class_details: Dict[str, Any] = field(default_factory=dict)  # Add this line
+    class_details: Dict[str, Any] = field(default_factory=dict)
+
+    def sanitize(self) -> None:
+        """Ensure all sets contain only strings."""
+        self.valid_assets = {str(x) for x in self.valid_assets if x}
+        self.valid_classes = {str(x) for x in self.valid_classes if x}
+        self.missing_assets = {str(x) for x in self.missing_assets if x}
+        self.missing_classes = {str(x) for x in self.missing_classes if x}
+        self.equipment = {str(x) for x in self.equipment if x}
 
 @dataclass
 class ValidationResult:

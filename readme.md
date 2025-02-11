@@ -38,8 +38,6 @@ Create a `config.json` file:
         {
             "name": "vanilla",
             "mods": [],
-            "class_config": "configs/vanilla.ini",
-            "skip_assets": true
         },
         {
             "name": "cba_ace",
@@ -47,7 +45,6 @@ Create a `config.json` file:
                 "@CBA_A3",
                 "@ace"
             ],
-            "class_config": "configs/cba_ace.ini"
         }
     ]
 }

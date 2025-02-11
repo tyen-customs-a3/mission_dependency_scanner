@@ -1,7 +1,7 @@
 import argparse
 import json
 from pathlib import Path
-from typing import Tuple, Dict, List, Union
+from typing import Tuple, Dict, List, Union, Any, TypeVar, cast, Optional, overload
 import logging
 
 from dependency_scanner.core.types import ScanTask
@@ -19,6 +19,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     return parser.parse_args()
 
+T = TypeVar('T')
+
+@overload
+def _convert_to_path(value: Union[str, Path]) -> Path: ...
+
+@overload
+def _convert_to_path(value: List[str]) -> List[Path]: ...
+
 def _convert_to_path(value: Union[str, List[str], Path]) -> Union[Path, List[Path]]:
     """Convert a value to Path or list of Paths."""
     if isinstance(value, (str, Path)):
@@ -27,7 +35,7 @@ def _convert_to_path(value: Union[str, List[str], Path]) -> Union[Path, List[Pat
         return [Path(v) for v in value]
     raise TypeError(f"Cannot convert {type(value)} to Path")
 
-def load_config(config_path: Path, cli_args) -> Tuple[Dict[str, Path], List[ScanTask], List[Path]]:
+def load_config(config_path: Path, cli_args: argparse.Namespace) -> Tuple[Dict[str, Path], List[ScanTask], List[Path]]:
     """Load and merge configuration."""
     try:
         config = json.loads(config_path.read_text()) if config_path.exists() else {}
@@ -35,18 +43,18 @@ def load_config(config_path: Path, cli_args) -> Tuple[Dict[str, Path], List[Scan
         logger.warning(f"Failed to load config file: {e}")
         config = {}
     
-    # Parse paths, excluding known list-type paths
-    paths = {}
+    paths: Dict[str, Path] = {}
     config_paths = config.get("paths", {})
     for k, v in config_paths.items():
-        if k != "missions":  # Skip missions as it's handled separately
+        if k != "missions":
             try:
-                paths[k] = _convert_to_path(v)
+                converted = _convert_to_path(v)
+                if not isinstance(converted, list):
+                    paths[k] = converted
             except Exception as e:
                 logger.warning(f"Failed to convert path '{k}': {e}")
     
-    # Get missions
-    missions = []
+    missions: List[Path] = []
     if cli_args.mission:
         missions = [cli_args.mission]
     else:
@@ -55,34 +63,18 @@ def load_config(config_path: Path, cli_args) -> Tuple[Dict[str, Path], List[Scan
             mission_paths = [mission_paths]
         missions = [Path(m) for m in mission_paths]
     
-    # Get game path
-    game_path = paths.get("game")
-    if not game_path or not game_path.exists():
-        logger.warning(f"Game path not found or invalid: {game_path}")
-        game_path = None
-
-    # Get tasks
-    tasks = []
+    tasks: List[ScanTask] = []
     if cli_args.mods:
-        # Create single task from CLI args
-        mod_paths = cli_args.mods
-        if game_path:
-            mod_paths = [game_path] + mod_paths
         tasks = [ScanTask(
             name="cli_task",
-            mods=[Path(m) for m in mod_paths],
-            class_config=Path("class_config.json")
+            mods=[Path(m) for m in cli_args.mods],
         )]
     else:
-        # Load tasks from config
         for task_config in config.get("tasks", []):
             mod_paths = [Path(m) for m in task_config["mods"]]
-            if game_path:
-                mod_paths = [game_path] + mod_paths
             tasks.append(ScanTask(
                 name=task_config["name"],
                 mods=mod_paths,
-                class_config=Path(task_config.get("class_config", "class_config.json"))
             ))
     
     return paths, tasks, missions
