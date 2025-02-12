@@ -38,10 +38,9 @@ class ReportWriter:
             
     def _write_text_report(self, path: Path, results: Dict[Path, ValidationResult]) -> None:
         """Write results in text format using category-based view."""
-        with path.open('w') as f:
+        with path.open('w', encoding='utf-8') as f:
             f.write("=== Mission Dependency Report ===\n\n")
             
-            # Separate missions into compliant and non-compliant
             non_compliant = []
             compliant = []
             
@@ -51,9 +50,8 @@ class ReportWriter:
                 else:
                     compliant.append(mission_path)
             
-            # Write non-compliant missions first
             if non_compliant:
-                f.write("🔴 MISSIONS WITH MISSING DEPENDENCIES\n")
+                f.write("[!] MISSIONS WITH MISSING DEPENDENCIES\n")
                 f.write("-" * 50 + "\n\n")
                 for mission_path, result in non_compliant:
                     f.write(f"{mission_path.name}\n")
@@ -69,15 +67,13 @@ class ReportWriter:
                             f.write(f"  └─ {asset}\n")
                     f.write("\n")
             
-            # Write compliant missions
-            f.write(f"\n🟢 COMPLIANT MISSIONS ({len(compliant)})\n")
+            f.write(f"\n[+] COMPLIANT MISSIONS ({len(compliant)})\n")
             f.write("-" * 50 + "\n")
             for mission_path in sorted(compliant):
                 f.write(f"{mission_path.name}\n")
             
-            # Write summary
             total = len(results)
-            f.write(f"\n📊 SUMMARY\n")
+            f.write(f"\n[*] SUMMARY\n")
             f.write("-" * 9 + "\n")
             f.write(f"Total Missions: {total}\n")
             f.write(f"Compliant: {len(compliant)}\n")
