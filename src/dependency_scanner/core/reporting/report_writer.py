@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Optional
 import logging
 import json
 from datetime import datetime
@@ -73,7 +73,9 @@ class ReportWriter:
                 f.write(f"{mission_path.name}\n")
             
             total = len(results)
-            f.write(f"\n[*] SUMMARY\n")
+            f.write("\n")
+            f.write("[*] SUMMARY")
+            f.write("\n")
             f.write("-" * 9 + "\n")
             f.write(f"Total Missions: {total}\n")
             f.write(f"Compliant: {len(compliant)}\n")

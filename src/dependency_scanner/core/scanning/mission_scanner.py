@@ -50,8 +50,6 @@ class MissionScanningService:
         if self._executor:
             self._executor.shutdown(wait=True)
             self._executor = None
-        if hasattr(self._scanner, 'close'):
-            self._scanner.close()
 
     @staticmethod
     def is_mission_directory(path: Path) -> bool:
@@ -87,16 +85,14 @@ class MissionScanningService:
     def _convert_mission_result(self, raw_result: Any) -> ScanResult:
         """Convert scanner result to internal format."""
         return ScanResult(
-            valid_assets=set(getattr(raw_result, 'valid_assets', set())),
-            valid_classes=set(getattr(raw_result, 'valid_classes', set())),
-            missing_assets=set(getattr(raw_result, 'missing_assets', set())),
-            missing_classes=set(getattr(raw_result, 'missing_classes', set())),
-            equipment=set(getattr(raw_result, 'equipment', set())),
-            property_results=getattr(raw_result, 'property_results', {}),
-            class_details=self._convert_class_details(getattr(raw_result, 'classes', {}))
+            equipment=raw_result.equipment,
+            valid_assets=raw_result.valid_assets,
+            invalid_assets=raw_result.invalid_assets,
+            property_results=raw_result.property_results,
+            class_details=self._convert_class_details(raw_result.class_details)
         )
 
-    def _convert_class_details(self, class_data: Dict) -> Dict:
+    def _convert_class_details(self, class_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         """Convert class details to internal format."""
         return {
             name: {

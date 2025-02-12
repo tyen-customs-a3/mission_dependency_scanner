@@ -1,12 +1,8 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, Set, Any, Optional
 import logging
 
 from dependency_scanner.core.types import ValidationResult, ScanResult
-from class_scanner.models import ClassData
-from class_scanner import ClassAPI
-from asset_scanner import AssetAPI
 
 logger = logging.getLogger(__name__)
 

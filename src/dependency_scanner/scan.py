@@ -2,17 +2,13 @@
 import sys
 import logging
 from pathlib import Path
-from typing import List, Optional, Sequence, cast, Dict
+from typing import List, Optional, Dict
 import argparse
 
-from asset_scanner import ScanResult
-
 from dependency_scanner.core.config import load_config
-from dependency_scanner.core.types import ScanTask
-from dependency_scanner.core.utils.cache import is_cache_valid
+from dependency_scanner.core.types import ScanResult, ScanTask
 from dependency_scanner.core.scanning.content_scanner import ContentScanResult, ContentScanner
 from dependency_scanner.core.validation.task_validator import TaskValidator
-from dependency_scanner.core.reporting.report_writer import ReportWriter
 from dependency_scanner.core.scanning.mission_scanner import MissionScanningService
 
 logger = logging.getLogger(__name__)
@@ -59,7 +55,7 @@ class Scanner:
     def execute_scan(self, tasks: List[ScanTask], missions: List[Path], format_type: str = "text") -> bool:
         """Execute complete scan process."""
         try:
-            # Scan missions
+            # Scan missions - use results directly without conversion
             mission_results = self.mission_scanner.scan_missions(missions)
             if not mission_results:
                 raise RuntimeError("Mission scan failed")

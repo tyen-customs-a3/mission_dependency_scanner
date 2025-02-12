@@ -45,15 +45,18 @@ class TaskValidator:
             
             if not validation_results:
                 return None
+
+            # Convert ValidationResult to Dict[Path, ValidationResult]
+            results_dict = {Path("validation"): validation_results}
                 
             # Generate report
             report_path = self.report_writer.write_report(
                 task_name,
-                validation_results,
+                results_dict,
                 format_type
             )
             
-            return TaskValidationResult(validation_results, report_path)
+            return TaskValidationResult(results_dict, report_path)
             
         except Exception as e:
             logger.error(f"Task validation failed: {e}")

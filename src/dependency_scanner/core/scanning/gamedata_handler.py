@@ -3,12 +3,12 @@ from typing import Dict, Optional, Any, List, Set, Tuple
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+import hashlib
 
 from class_scanner.api import ClassAPI
-from class_scanner.models import ClassData, PboScanData
+from class_scanner.models import ClassData
 from asset_scanner import AssetAPI, Asset
 from asset_scanner.config import APIConfig
-from dependency_scanner.core.utils.cache import calculate_folder_hash
 
 logger = logging.getLogger(__name__)
 
@@ -44,25 +44,31 @@ class GameDataHandler:
                     logger.warning(f"Mod path does not exist: {mod_path}")
                     continue
                 
-                # Generate cache paths and check cache first
-                mod_hash = calculate_folder_hash(mod_path)
-                class_cache = self.class_cache_dir / f"{mod_path.name}_{mod_hash}.json"
-                asset_cache = self.asset_cache_dir / f"{mod_path.name}_{mod_hash}.json"
-                
-                cached_content = self._load_from_cache(class_cache, asset_cache, mod_path)
-                if cached_content:
-                    logger.info(f"Using cached content for {mod_path.name}")
-                    classes, assets = cached_content
-                    combined_classes.update(classes)
-                    combined_assets.update(assets)
+                # Get all @-prefixed folders
+                mod_folders = self._get_mod_folders(mod_path)
+                if not mod_folders:
+                    logger.warning(f"No @-prefixed folders found in: {mod_path}")
                     continue
-                
-                # If no cache, perform parallel scan
-                logger.info(f"Starting parallel scan of {mod_path.name}")
-                scan_results = self._parallel_scan_mod(mod_path, class_cache, asset_cache)
-                if scan_results:
-                    combined_classes.update(scan_results.get('classes', {}))
-                    combined_assets.update(scan_results.get('assets', {}))
+
+                for folder in mod_folders:
+                    # Generate cache paths using @folder name
+                    class_cache, asset_cache = self._get_cache_paths(folder)
+                    
+                    cached_content = self._load_from_cache(class_cache, asset_cache, folder)
+                    
+                    if cached_content:
+                        logger.info(f"Using cached content for {folder.name}")
+                        classes, assets = cached_content
+                        combined_classes.update(classes)
+                        combined_assets.update(assets)
+                        continue
+                    
+                    # If no cache, perform parallel scan
+                    logger.info(f"Starting parallel scan of {folder.name}")
+                    scan_results = self._parallel_scan_mod(folder, class_cache, asset_cache)
+                    if scan_results:
+                        combined_classes.update(scan_results.get('classes', {}))
+                        combined_assets.update(scan_results.get('assets', {}))
                 
             return {
                 'classes': combined_classes,
@@ -98,7 +104,7 @@ class GameDataHandler:
             
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 future_to_pbo = {
-                    executor.submit(self._scan_single_pbo, pbo, class_scanner): pbo
+                    executor.submit(self._scan_pbo_for_classes, pbo, class_scanner): pbo
                     for pbo in pbo_files
                 }
                 
@@ -122,7 +128,7 @@ class GameDataHandler:
             class_scanner.save_cache()
             
             # Scan for assets
-            assets = self._scan_assets(mod_path, asset_scanner)
+            assets = self._scan_folder_for_assets(mod_path, asset_scanner)
             stats.asset_count = len(assets)
             
             # Log final statistics
@@ -140,16 +146,16 @@ class GameDataHandler:
             logger.error(f"Failed parallel scan of {mod_path}: {e}")
             return None
 
-    def _scan_single_pbo(self, pbo_path: Path, scanner: ClassAPI) -> Optional[Dict[str, ClassData]]:
+    def _scan_pbo_for_classes(self, pbo_path: Path, scanner: ClassAPI) -> Optional[Dict[str, ClassData]]:
         """Scan a single PBO file."""
         try:
-            if result := scanner.scan_pbo(pbo_path):
-                return result.classes
+            if result := scanner.scan(pbo_path):
+                return dict(result.classes)
         except Exception as e:
             logger.error(f"Failed to scan PBO {pbo_path}: {e}")
         return None
 
-    def _scan_assets(self, mod_path: Path, scanner: AssetAPI) -> Set[Asset]:
+    def _scan_folder_for_assets(self, mod_path: Path, scanner: AssetAPI) -> Set[Asset]:
         """Scan for assets in mod directory."""
         try:
             if result := scanner.scan(mod_path):
@@ -159,21 +165,60 @@ class GameDataHandler:
             logger.error(f"Failed to scan assets in {mod_path}: {e}")
         return set()
 
+    def _get_content_hash(self, folder_path: Path) -> str:
+        """Calculate hash based on folder structure and file sizes."""
+        try:
+            # Get all files recursively
+            pbo_files = list(folder_path.rglob('*.pbo'))
+            if not pbo_files:
+                return ""
+                
+            # Sort for consistent hashing
+            pbo_files.sort()
+            
+            # Combine path and size information
+            content_info = [f"{p.relative_to(folder_path)}:{p.stat().st_size}" 
+                          for p in pbo_files]
+            
+            # Create hash of all paths and sizes
+            return hashlib.blake2b(
+                "|".join(content_info).encode(), 
+                digest_size=16
+            ).hexdigest()
+            
+        except Exception as e:
+            logger.error(f"Failed to calculate content hash for {folder_path}: {e}")
+            return ""
+
+    def _get_cache_paths(self, folder_path: Path) -> Tuple[Path, Path]:
+        """Generate cache paths using content-based hash."""
+        content_hash = self._get_content_hash(folder_path)
+        cache_name = f"{folder_path.name}_{content_hash}"
+        return (
+            self.class_cache_dir / f"{cache_name}_classes.json",
+            self.asset_cache_dir / f"{cache_name}_assets.json"
+        )
+
     def _load_from_cache(self, 
                         class_cache: Path, 
                         asset_cache: Path,
                         mod_path: Path) -> Optional[Tuple[Dict[str, ClassData], Dict[str, Asset]]]:
         """Try to load content from existing cache files."""
         try:
-            # Check if cache files exist and are valid
-            if not (class_cache.exists() and asset_cache.exists()):
+            # Generate new cache paths based on current content
+            new_class_cache, new_asset_cache = self._get_cache_paths(mod_path)
+            
+            # If old cache files exist but with different hash, they're invalid
+            if ((class_cache != new_class_cache or asset_cache != new_asset_cache) and 
+                (class_cache.exists() or asset_cache.exists())):
+                logger.info(f"Content changed for {mod_path.name}, will rescan")
                 return None
-                
-            # Verify cache hash
-            mod_hash = calculate_folder_hash(mod_path)
-            cache_hash = class_cache.stem.split('_')[-1]
-            if cache_hash != mod_hash:
-                logger.info(f"Cache invalid for {mod_path.name}, will rescan")
+            
+            # Use new cache paths
+            class_cache, asset_cache = new_class_cache, new_asset_cache
+            
+            # Check if cache files exist
+            if not (class_cache.exists() and asset_cache.exists()):
                 return None
                 
             # Load caches using direct file paths
@@ -194,6 +239,11 @@ class GameDataHandler:
             logger.warning(f"Failed to load cache for {mod_path.name}: {e}")
             return None
         
+    def _get_mod_folders(self, mod_path: Path) -> List[Path]:
+        """Get all immediate @-prefixed folders within the mod path."""
+        return [p for p in mod_path.iterdir() 
+                if p.is_dir() and p.name.startswith('@')]
+
     def close(self) -> None:
         """Cleanup resources."""
         pass  # APIs handle their own cleanup

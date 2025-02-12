@@ -1,6 +1,9 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import NamedTuple, Set, Dict, Any
+from typing import NamedTuple, Set, Dict, Any, List
+
+# Remove asset_scanner import since we won't convert types anymore
+# from asset_scanner.models import ScanResult as AssetScanResult
 
 # Define categories/properties to ignore during validation
 IGNORED_CATEGORIES = {
@@ -38,9 +41,9 @@ class PropertyInfo(NamedTuple):
 
 @dataclass
 class ScanTask:
-    """Configuration for a specific scanning task"""
+    """Scanning task configuration."""
     name: str
-    mods: list[Path]
+    mods: List[Path]
 
 @dataclass
 class MissionClass:
@@ -66,26 +69,18 @@ class PropertyValidationResult:
 
 @dataclass
 class ScanResult:
-    """Mission scan results."""
-    valid_assets: Set[str] = field(default_factory=set)
-    valid_classes: Set[str] = field(default_factory=set)
-    missing_assets: Set[str] = field(default_factory=set)
-    missing_classes: Set[str] = field(default_factory=set)
+    """Mission scan results, matching asset_scanner model structure."""
     equipment: Set[str] = field(default_factory=set)
+    valid_assets: Set[Path] = field(default_factory=set)
+    invalid_assets: Set[Path] = field(default_factory=set)
     property_results: Dict[str, Any] = field(default_factory=dict)
     class_details: Dict[str, Any] = field(default_factory=dict)
 
-    def sanitize(self) -> None:
-        """Ensure all sets contain only strings."""
-        self.valid_assets = {str(x) for x in self.valid_assets if x}
-        self.valid_classes = {str(x) for x in self.valid_classes if x}
-        self.missing_assets = {str(x) for x in self.missing_assets if x}
-        self.missing_classes = {str(x) for x in self.missing_classes if x}
-        self.equipment = {str(x) for x in self.equipment if x}
+# Remove convert_scan_result function
 
 @dataclass
 class ValidationResult:
-    """Mission validation results."""
+    """Results of dependency validation."""
     valid_assets: Set[str]
     valid_classes: Set[str]
     missing_assets: Set[str]
