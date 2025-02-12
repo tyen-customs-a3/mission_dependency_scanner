@@ -112,10 +112,10 @@ class DependencyValidator:
             
             if class_name_lower in content_classes_lower:
                 original_name = content_classes_lower[class_name_lower]
-                logger.info(f"Found valid class: '{original_name}'")
+                logger.debug(f"Found valid class: '{original_name}'")
                 valid_classes.add(original_name)
             else:
-                logger.warning(f"Missing class: '{class_name_lower}' - Not found in available content")
+                logger.debug(f"Missing class: '{class_name_lower}' - Not found in available content")
                 missing_classes.add(class_name_lower)
 
     def _validate_assets(self,
