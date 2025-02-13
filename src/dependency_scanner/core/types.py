@@ -2,32 +2,25 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import NamedTuple, Set, Dict, Any, List
 
-# Remove asset_scanner import since we won't convert types anymore
-# from asset_scanner.models import ScanResult as AssetScanResult
 
-# Define categories/properties to ignore during validation
 IGNORED_CATEGORIES = {
-    # Unit special abilities
     "traits[]",
     "speakers[]",
     "faces[]",
     "insignias[]",
     "identities[]",
     
-    # Mission/Environment settings
     "variables[]",
     "colors[]",
     "params[]",
     "sounds[]",
     "music[]",
     
-    # UI/Display elements
     "controls[]",
     "textures[]",
     "fonts[]",
     "styles[]",
     
-    # Script/Function names
     "functions[]",
     "scriptPaths[]",
     "eventHandlers[]",
@@ -36,20 +29,20 @@ IGNORED_CATEGORIES = {
 class PropertyInfo(NamedTuple):
     """Information about a property found in mission files."""
     name: str
-    type: str  # The property type (e.g., 'traits', 'magazines', etc.)
+    type: str
     value: str
 
 @dataclass
 class ScanTask:
     """Scanning task configuration."""
     name: str
-    mods: List[Path]
+    data_path: List[Path]
 
 @dataclass
 class MissionClass:
     """Represents a class definition from a mission file."""
     name: str
-    properties: Dict[str, list[str]]  # Property name -> list of values
+    properties: Dict[str, list[str]]
 
     def has_property(self, name: str) -> bool:
         """Check if class has a specific property."""
@@ -75,8 +68,6 @@ class ScanResult:
     invalid_assets: Set[Path] = field(default_factory=set)
     property_results: Dict[str, Any] = field(default_factory=dict)
     class_details: Dict[str, Any] = field(default_factory=dict)
-
-# Remove convert_scan_result function
 
 @dataclass
 class ValidationResult:

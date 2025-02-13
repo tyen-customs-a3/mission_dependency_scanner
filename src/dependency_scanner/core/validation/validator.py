@@ -2,7 +2,9 @@ from pathlib import Path
 from typing import Dict, Set, Any, Optional
 import logging
 
-from dependency_scanner.core.types import ValidationResult, ScanResult
+from mission_scanner import ScanResult
+
+from dependency_scanner.core.types import ValidationResult
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +18,8 @@ class DependencyValidator:
     def validate_content(self,
                          mission_results: Dict[Path, ScanResult],
                          game_content: Dict[str, Any],
-                         task_content: Dict[str, Any]) -> Optional[ValidationResult]:
+                         task_content: Dict[str, Any]) -> Optional[Dict[Path, ValidationResult]]:
+
         """Validate mission content against game and task content."""
         try:
             # Get initial lengths for validation
@@ -24,6 +27,15 @@ class DependencyValidator:
             game_asset_count = len(game_content.get('assets', {}))
             task_class_count = len(task_content.get('classes', {}))
             task_asset_count = len(task_content.get('assets', {}))
+
+            # Make sure the content is more than just empty dictionaries
+            if not game_class_count and not game_asset_count:
+                logger.error("Game content is empty")
+                return None
+            
+            if not task_class_count and not task_asset_count:
+                logger.error("Task content is empty")
+                return None
 
             # Merge game and task content
             combined_classes = {
@@ -63,7 +75,7 @@ class DependencyValidator:
                     combined_classes,
                     combined_assets
                 )
-            
+                
             return validation_results
             
         except Exception as e:
@@ -82,7 +94,8 @@ class DependencyValidator:
 
         self._validate_classes(scan_result, classes, valid_classes, missing_classes)
 
-        self._validate_assets(scan_result, assets, valid_assets, missing_assets)
+        # TODO: Implement asset validation
+        # self._validate_assets(scan_result, assets, valid_assets, missing_assets)
 
         return ValidationResult(
             valid_assets=valid_assets,
@@ -113,17 +126,3 @@ class DependencyValidator:
             else:
                 logger.debug(f"Missing class: '{class_name_lower}' - Not found in available content")
                 missing_classes.add(class_name_lower)
-
-    def _validate_assets(self,
-                         scan_result: ScanResult,
-                         combined_assets: Dict[str, Any],
-                         valid_assets: Set[str],
-                         missing_assets: Set[str]) -> None:
-        """Validate asset dependencies."""
-        asset_paths = {str(path) for path in scan_result.valid_assets if path}
-
-        for asset_path in asset_paths:
-            if asset := combined_assets.get(asset_path):
-                valid_assets.add(asset_path)
-            else:
-                missing_assets.add(asset_path)

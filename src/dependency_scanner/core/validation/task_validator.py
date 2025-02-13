@@ -2,9 +2,11 @@ from pathlib import Path
 from typing import Dict, Optional
 import logging
 
+from mission_scanner import ScanResult
+
 from dependency_scanner.core.reporting.report_writer import ReportWriter
-from dependency_scanner.core.types import ValidationResult, ScanResult
 from dependency_scanner.core.scanning.content_scanner import ContentScanResult
+from dependency_scanner.core.types import ValidationResult
 from dependency_scanner.core.validation.validator import DependencyValidator
 
 logger = logging.getLogger(__name__)
@@ -46,17 +48,14 @@ class TaskValidator:
             if not validation_results:
                 return None
 
-            # Convert ValidationResult to Dict[Path, ValidationResult]
-            results_dict = {Path("validation"): validation_results}
-                
             # Generate report
             report_path = self.report_writer.write_report(
                 task_name,
-                results_dict,
+                validation_results,
                 format_type
             )
             
-            return TaskValidationResult(results_dict, report_path)
+            return TaskValidationResult(validation_results, report_path)
             
         except Exception as e:
             logger.error(f"Task validation failed: {e}")

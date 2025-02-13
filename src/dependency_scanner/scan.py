@@ -5,8 +5,10 @@ from pathlib import Path
 from typing import List, Optional, Dict
 import argparse
 
+from mission_scanner import ScanResult
+
 from dependency_scanner.core.config import load_config
-from dependency_scanner.core.types import ScanResult, ScanTask
+from dependency_scanner.core.types import ScanTask
 from dependency_scanner.core.scanning.content_scanner import ContentScanResult, ContentScanner
 from dependency_scanner.core.validation.task_validator import TaskValidator
 from dependency_scanner.core.scanning.mission_scanner import MissionScanningService
@@ -63,9 +65,11 @@ class Scanner:
             # Scan game content
             game_task = ScanTask(
                 name="base_game",
-                mods=[self.game_path]
+                data_path=[self.game_path]
             )
-            game_content = self.content_scanner.scan_content(game_task)
+            
+            game_content = self.content_scanner.scan_content(game_task, is_mod_folder=False)
+            
             if not game_content:
                 raise RuntimeError("Game content scan failed")
             
@@ -95,7 +99,7 @@ class Scanner:
             logger.info(f"Processing task: {task.name}")
             
             # Scan task content
-            task_content = self.content_scanner.scan_content(task)
+            task_content = self.content_scanner.scan_content(task, is_mod_folder=True)
             if not task_content:
                 logger.error(f"Failed to scan task: {task.name}")
                 return False

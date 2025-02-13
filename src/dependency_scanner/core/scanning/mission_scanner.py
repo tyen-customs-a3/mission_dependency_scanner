@@ -1,10 +1,9 @@
 from pathlib import Path
-from typing import Any, Dict, Optional, List
+from typing import Dict, Optional, List
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from mission_scanner import MissionScanner
-from dependency_scanner.core.types import ScanResult
+from mission_scanner import MissionScanner, ScanResult
 
 logger = logging.getLogger(__name__)
 
@@ -77,31 +76,7 @@ class MissionScanningService:
         """Scan a single mission directory."""
         try:
             if result := self._scanner.scan_directory(path):
-                return self._convert_mission_result(result)
+                return result
         except Exception as e:
             logger.error(f"Error scanning mission {path}: {e}")
         return None
-
-    def _convert_mission_result(self, raw_result: Any) -> ScanResult:
-        """Convert scanner result to internal format."""
-        return ScanResult(
-            equipment=raw_result.equipment,
-            valid_assets=raw_result.valid_assets,
-            invalid_assets=raw_result.invalid_assets,
-            property_results=raw_result.property_results,
-            class_details=self._convert_class_details(raw_result.class_details)
-        )
-
-    def _convert_class_details(self, class_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-        """Convert class details to internal format."""
-        return {
-            name: {
-                'parent': getattr(data, 'parent', 'Unknown'),
-                'source_file': str(getattr(data, 'source_file', 'Unknown')),
-                'properties': {
-                    k: getattr(v, 'raw_value', str(v))
-                    for k, v in getattr(data, 'properties', {}).items()
-                }
-            }
-            for name, data in class_data.items()
-        }

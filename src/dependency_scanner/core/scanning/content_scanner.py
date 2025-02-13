@@ -24,7 +24,7 @@ class ContentScanner:
         self.max_workers = max_workers
         self._handler: Optional[GameDataHandler] = None
         
-    def scan_content(self, task: ScanTask) -> Optional[ContentScanResult]:
+    def scan_content(self, task: ScanTask, is_mod_folder: bool = False) -> Optional[ContentScanResult]:
         """Scan content for a given task."""
         try:
             # Create fresh handler for each scan operation
@@ -33,7 +33,12 @@ class ContentScanner:
                 self.max_workers
             )
             
-            content = self._handler.scan_mod_content(task.mods)
+            content = None
+            if is_mod_folder:
+                content = self._handler.scan_mod_content(task.data_path)
+            else:
+                content = self._handler.scan_game_content(task.data_path[0])
+            
             if not content:
                 return None
                 

@@ -33,6 +33,37 @@ class GameDataHandler:
         self.class_cache_dir.mkdir(parents=True, exist_ok=True)
         self.asset_cache_dir.mkdir(parents=True, exist_ok=True)
         
+    def scan_game_content(self, game_path: Path) -> Optional[Dict[str, Any]]:
+        """Scan content from a game directory."""
+
+        # Generate cache paths using @folder name
+        class_cache, asset_cache = self._get_cache_paths(game_path)
+        
+        cached_content = self._load_from_cache(class_cache, asset_cache, game_path)
+        # Print cache paths for debugging
+        logger.info(f"Class cache: {class_cache}")
+        logger.info(f"Asset cache: {asset_cache}")
+        
+        combined_classes = {}
+        combined_assets = {}
+
+        if cached_content is not None:
+            logger.info(f"Using cached content for {game_path.name}")
+            classes, assets = cached_content
+            combined_classes.update(classes)
+            combined_assets.update(assets)
+        else:
+            logger.info(f"Starting parallel scan of {game_path.name}")
+            scan_results = self._parallel_scan_mod(game_path, class_cache, asset_cache)
+            if scan_results:
+                combined_classes.update(scan_results.get('classes', {}))
+                combined_assets.update(scan_results.get('assets', {}))
+        
+        return {
+            'classes': combined_classes,
+            'assets': combined_assets
+        }
+        
     def scan_mod_content(self, mod_paths: List[Path]) -> Optional[Dict[str, Any]]:
         """Scan mod content and return combined results."""
         try:
@@ -54,6 +85,9 @@ class GameDataHandler:
                     # Generate cache paths using @folder name
                     class_cache, asset_cache = self._get_cache_paths(folder)
                     
+                    logger.info(f"Class cache: {class_cache}")
+                    logger.info(f"Asset cache: {asset_cache}")
+                    
                     cached_content = self._load_from_cache(class_cache, asset_cache, folder)
                     
                     if cached_content:
@@ -63,7 +97,6 @@ class GameDataHandler:
                         combined_assets.update(assets)
                         continue
                     
-                    # If no cache, perform parallel scan
                     logger.info(f"Starting parallel scan of {folder.name}")
                     scan_results = self._parallel_scan_mod(folder, class_cache, asset_cache)
                     if scan_results:
@@ -193,10 +226,10 @@ class GameDataHandler:
     def _get_cache_paths(self, folder_path: Path) -> Tuple[Path, Path]:
         """Generate cache paths using content-based hash."""
         content_hash = self._get_content_hash(folder_path)
-        cache_name = f"{folder_path.name}_{content_hash}"
+        base_name = f"{folder_path.name}_{content_hash}"
         return (
-            self.class_cache_dir / f"{cache_name}_classes.json",
-            self.asset_cache_dir / f"{cache_name}_assets.json"
+            self.class_cache_dir / f"{base_name}_classes.json",
+            self.asset_cache_dir / f"{base_name}_assets.json"
         )
 
     def _load_from_cache(self, 
@@ -205,23 +238,11 @@ class GameDataHandler:
                         mod_path: Path) -> Optional[Tuple[Dict[str, ClassData], Dict[str, Asset]]]:
         """Try to load content from existing cache files."""
         try:
-            # Generate new cache paths based on current content
-            new_class_cache, new_asset_cache = self._get_cache_paths(mod_path)
-            
-            # If old cache files exist but with different hash, they're invalid
-            if ((class_cache != new_class_cache or asset_cache != new_asset_cache) and 
-                (class_cache.exists() or asset_cache.exists())):
-                logger.info(f"Content changed for {mod_path.name}, will rescan")
-                return None
-            
-            # Use new cache paths
-            class_cache, asset_cache = new_class_cache, new_asset_cache
-            
-            # Check if cache files exist
+            # Check if both cache files exist
             if not (class_cache.exists() and asset_cache.exists()):
                 return None
                 
-            # Load caches using direct file paths
+            # Load caches
             class_scanner = ClassAPI(cache_file=class_cache)
             if not class_scanner.cache.is_valid():
                 return None
