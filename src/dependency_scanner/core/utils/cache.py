@@ -73,10 +73,11 @@ class CacheManager:
         # Create specialized cache directories
         self.base_game_dir = cache_dir / "base_game"
         self.tasks_dir = cache_dir / "tasks"
+        self.missions_dir = cache_dir / "missions"
         
         # Ensure all cache directories exist
         for directory in (self.class_cache_dir, self.asset_cache_dir, 
-                        self.base_game_dir, self.tasks_dir):
+                        self.base_game_dir, self.tasks_dir, self.missions_dir):
             directory.mkdir(parents=True, exist_ok=True)
         
         self._default_class_api = ClassAPI(cache_dir=self.class_cache_dir)

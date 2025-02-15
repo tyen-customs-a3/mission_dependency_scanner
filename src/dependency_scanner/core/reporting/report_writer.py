@@ -60,7 +60,7 @@ class ReportWriter:
                         f.write("  Missing Classes:\n")
                         for cls in sorted(result.missing_classes):
                             f.write(f"  └─ {cls}\n")
-                            
+                                                        
                     if result.missing_assets:
                         f.write("  Missing Assets:\n")
                         for asset in sorted(result.missing_assets):

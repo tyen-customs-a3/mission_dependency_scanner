@@ -8,11 +8,6 @@
     },
     "tasks": [
         {
-            "name": "pca",
-            "mods": [ "C:/pca" ],
-            "skip_assets": true
-        },
-        {
             "name": "pcanext",
             "mods": [ "D:/pca/repo/arma" ],
             "skip_assets": true

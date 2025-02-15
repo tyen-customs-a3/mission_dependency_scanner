@@ -68,6 +68,7 @@ def load_config(config_path: Path, cli_args: argparse.Namespace) -> Tuple[Dict[s
         tasks = [ScanTask(
             name="cli_task",
             data_path=[Path(m) for m in cli_args.mods],
+            ignore_patterns=config.get("ignore_patterns", [])
         )]
     else:
         for task_config in config.get("tasks", []):
@@ -75,6 +76,7 @@ def load_config(config_path: Path, cli_args: argparse.Namespace) -> Tuple[Dict[s
             tasks.append(ScanTask(
                 name=task_config["name"],
                 data_path=mod_paths,
+                ignore_patterns=task_config.get("ignore_patterns", []) or config.get("ignore_patterns", [])
             ))
     
     return paths, tasks, missions
